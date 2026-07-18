@@ -1,0 +1,135 @@
+"""Render specimen images per font: glyph sample, pangram, weight strip.
+
+Complex-script shaping (Arabic, Devanagari, CJK, ...) is out of scope for now — PIL/FreeType
+draws glyphs but does not shape them. Any rendering failure is logged and the font is
+skipped rather than blocking the batch.
+"""
+
+from dataclasses import dataclass
+from pathlib import Path
+
+from fontTools.ttLib import TTFont
+from PIL import Image, ImageDraw, ImageFont
+from tqdm import tqdm
+
+from ingestion.catalog import load_catalog
+from ingestion.config import CATALOG_PATH, GLYPH_SAMPLE, PANGRAM, SPECIMENS_DIR
+from ingestion.download_fonts import font_variant_path
+from ingestion.logging_setup import get_logger
+from ingestion.models import FontFamily
+
+logger = get_logger(__name__)
+
+GLYPH_CANVAS = (512, 512)
+PANGRAM_CANVAS = (1200, 200)
+WEIGHT_STRIP_WIDTH = 900
+WEIGHT_STRIP_ROW_HEIGHT = 90
+MARGIN = 24
+
+
+@dataclass(frozen=True, slots=True)
+class Specimen:
+    kind: str
+    path: Path
+
+
+def list_specimens(family: FontFamily) -> list[Path]:
+    return sorted((SPECIMENS_DIR / family.slug).glob("*.png"))
+
+
+def _is_valid_font(path: Path) -> bool:
+    try:
+        TTFont(path, lazy=True).close()
+        return True
+    except Exception:
+        return False
+
+
+def _fit_font(font_path: Path, text: str, max_width: int, max_height: int, max_size: int = 400) -> ImageFont.FreeTypeFont:
+    size = max_size
+    while size > 8:
+        font = ImageFont.truetype(str(font_path), size)
+        left, top, right, bottom = font.getbbox(text)
+        if right - left <= max_width and bottom - top <= max_height:
+            return font
+        size -= 4
+    return ImageFont.truetype(str(font_path), 8)
+
+
+def _draw_centered(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont, box: tuple[int, int, int, int]) -> None:
+    left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
+    box_left, box_top, box_right, box_bottom = box
+    x = box_left + ((box_right - box_left) - (right - left)) / 2 - left
+    y = box_top + ((box_bottom - box_top) - (bottom - top)) / 2 - top
+    draw.text((x, y), text, font=font, fill=0)
+
+
+def _render_single_line(font_path: Path, text: str, canvas_size: tuple[int, int], dest: Path) -> Path:
+    width, height = canvas_size
+    font = _fit_font(font_path, text, width - 2 * MARGIN, height - 2 * MARGIN)
+    image = Image.new("L", canvas_size, color=255)
+    draw = ImageDraw.Draw(image)
+    _draw_centered(draw, text, font, (0, 0, width, height))
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    image.save(dest)
+    return dest
+
+
+def _render_weight_strip(variant_paths: dict[str, Path], weights: list[str], dest: Path) -> Path:
+    height = WEIGHT_STRIP_ROW_HEIGHT * len(weights)
+    image = Image.new("L", (WEIGHT_STRIP_WIDTH, height), color=255)
+    draw = ImageDraw.Draw(image)
+    for row, weight in enumerate(weights):
+        font = _fit_font(
+            variant_paths[weight], PANGRAM,
+            WEIGHT_STRIP_WIDTH - 2 * MARGIN, WEIGHT_STRIP_ROW_HEIGHT - 2 * MARGIN,
+        )
+        row_box = (MARGIN, row * WEIGHT_STRIP_ROW_HEIGHT, WEIGHT_STRIP_WIDTH - MARGIN, (row + 1) * WEIGHT_STRIP_ROW_HEIGHT)
+        _draw_centered(draw, PANGRAM, font, row_box)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    image.save(dest)
+    return dest
+
+
+def render_family(family: FontFamily) -> list[Specimen]:
+    variant_paths = {
+        variant: path
+        for variant in family.variant_urls
+        if (path := font_variant_path(family, variant)).exists() and _is_valid_font(path)
+    }
+    if not variant_paths:
+        logger.warning("no valid downloaded font files for %s, skipping", family.name)
+        return []
+
+    primary = variant_paths.get(family.primary_variant) or next(iter(variant_paths.values()))
+    out_dir = SPECIMENS_DIR / family.slug
+
+    try:
+        specimens = [
+            Specimen("glyph", _render_single_line(primary, GLYPH_SAMPLE, GLYPH_CANVAS, out_dir / "glyph.png")),
+            Specimen("pangram", _render_single_line(primary, PANGRAM, PANGRAM_CANVAS, out_dir / "pangram.png")),
+        ]
+        weights = [w for w in family.upright_weights if w in variant_paths]
+        if len(weights) > 1:
+            specimens.append(
+                Specimen("weight_strip", _render_weight_strip(variant_paths, weights, out_dir / "weights.png"))
+            )
+        return specimens
+    except Exception:
+        logger.warning("failed to render specimens for %s", family.name, exc_info=True)
+        return []
+
+
+def main() -> None:
+    families = load_catalog(CATALOG_PATH)
+    rendered = skipped = 0
+    for family in tqdm(families, desc="rendering specimens"):
+        if render_family(family):
+            rendered += 1
+        else:
+            skipped += 1
+    logger.info("rendered specimens for %d families, skipped %d", rendered, skipped)
+
+
+if __name__ == "__main__":
+    main()

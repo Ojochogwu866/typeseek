@@ -1,0 +1,27 @@
+[project]
+name = "typeseek"
+version = "0.1.0"
+description = "Visual font discovery engine — ingestion pipeline"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.32",
+    "fonttools>=4.53",
+    "Pillow>=10.4",
+    "python-dotenv>=1.0",
+    "psycopg[binary]>=3.2",
+    "pgvector>=0.3",
+    "numpy>=2.0",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+embed = [
+    "torch>=2.4",
+    "open_clip_torch>=2.26",
+]
+storage = [
+    "boto3>=1.35",
+]
+
+[tool.setuptools.packages.find]
+include = ["ingestion*"]
