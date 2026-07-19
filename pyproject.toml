@@ -18,10 +18,16 @@ dependencies = [
 embed = [
     "torch>=2.4",
     "open_clip_torch>=2.26",
+    "transformers>=4.40",
 ]
 storage = [
     "boto3>=1.35",
 ]
+serve = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "python-multipart>=0.0.9",
+]
 
 [tool.setuptools.packages.find]
-include = ["ingestion*"]
+include = ["ingestion*", "sidecar*"]

@@ -30,20 +30,50 @@ def _load_model():
     return model.to(device), preprocess, device
 
 
-def embed_image(path: Path) -> np.ndarray:
-    import torch
-    from PIL import Image
+@lru_cache(maxsize=1)
+def _load_tokenizer():
+    import open_clip
 
-    model, preprocess, device = _load_model()
-    image = preprocess(Image.open(path).convert("RGB")).unsqueeze(0).to(device)
+    return open_clip.get_tokenizer(EMBEDDING_MODEL)
 
-    with torch.no_grad():
-        features = model.encode_image(image)
-        features /= features.norm(dim=-1, keepdim=True)
 
-    vector = features.squeeze(0).cpu().numpy()
+def _normalized(vector: "np.ndarray") -> np.ndarray:
     assert vector.shape[0] == EMBEDDING_DIM, f"unexpected embedding dim {vector.shape[0]}"
     return vector
+
+
+def embed_pil_image(image) -> np.ndarray:
+    """Embed an already-loaded PIL image (in-memory, no filesystem round trip)."""
+    import torch
+
+    model, preprocess, device = _load_model()
+    tensor = preprocess(image.convert("RGB")).unsqueeze(0).to(device)
+
+    with torch.no_grad():
+        features = model.encode_image(tensor)
+        features /= features.norm(dim=-1, keepdim=True)
+
+    return _normalized(features.squeeze(0).cpu().numpy())
+
+
+def embed_image(path: Path) -> np.ndarray:
+    from PIL import Image
+
+    return embed_pil_image(Image.open(path))
+
+
+def embed_text(text: str) -> np.ndarray:
+    import torch
+
+    model, _, device = _load_model()
+    tokenizer = _load_tokenizer()
+    tokens = tokenizer([text]).to(device)
+
+    with torch.no_grad():
+        features = model.encode_text(tokens)
+        features /= features.norm(dim=-1, keepdim=True)
+
+    return _normalized(features.squeeze(0).cpu().numpy())
 
 
 def embed_family(specimen_paths: list[Path]) -> np.ndarray:
