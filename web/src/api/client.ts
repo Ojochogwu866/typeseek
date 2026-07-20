@@ -10,19 +10,26 @@ async function parseOrThrow<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(input, init);
+  } catch {
+    throw new Error("Can't reach the server. Check your connection and try again.");
+  }
+  return parseOrThrow<T>(response);
+}
+
 export async function searchByImage(file: File): Promise<FontResult[]> {
   const form = new FormData();
   form.append("image", file);
-  const response = await fetch(`${API_URL}/search`, { method: "POST", body: form });
-  return parseOrThrow<FontResult[]>(response);
+  return request<FontResult[]>(`${API_URL}/search`, { method: "POST", body: form });
 }
 
 export async function getFont(id: number): Promise<FontResult> {
-  const response = await fetch(`${API_URL}/fonts/${id}`);
-  return parseOrThrow<FontResult>(response);
+  return request<FontResult>(`${API_URL}/fonts/${id}`);
 }
 
 export async function getNeighbors(id: number): Promise<FontResult[]> {
-  const response = await fetch(`${API_URL}/fonts/${id}/neighbors`);
-  return parseOrThrow<FontResult[]>(response);
+  return request<FontResult[]>(`${API_URL}/fonts/${id}/neighbors`);
 }

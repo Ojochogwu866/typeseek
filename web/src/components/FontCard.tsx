@@ -14,10 +14,12 @@ export function FontCard({ font, onSelect }: FontCardProps) {
       <div className="font-card__meta">
         <span className="badge">{font.category}</span>
         <span className="badge badge--license">{font.license}</span>
-        {font.similarity !== undefined && (
-          <span className="badge badge--similarity">{Math.round(font.similarity * 100)}%</span>
-        )}
       </div>
+      {font.similarity !== undefined && (
+        <span className="badge badge--similarity font-card__similarity">
+          {Math.round(font.similarity * 100)}%
+        </span>
+      )}
     </button>
   );
 }
