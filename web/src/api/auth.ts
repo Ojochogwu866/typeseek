@@ -3,26 +3,14 @@ import { API_URL, request } from './http';
 export interface AuthUser {
 	id: number;
 	email: string;
+	name: string;
 }
 
-interface Credentials {
-	email: string;
-	password: string;
-}
-
-export async function signup(credentials: Credentials): Promise<AuthUser> {
-	return request<AuthUser>(`${API_URL}/auth/signup`, {
+export async function googleAuth(credential: string): Promise<AuthUser> {
+	return request<AuthUser>(`${API_URL}/auth/google`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(credentials),
-	});
-}
-
-export async function login(credentials: Credentials): Promise<AuthUser> {
-	return request<AuthUser>(`${API_URL}/auth/login`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(credentials),
+		body: JSON.stringify({ credential }),
 	});
 }
 

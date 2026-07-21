@@ -5,8 +5,8 @@ import 'locomotive-scroll/dist/locomotive-scroll.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import './index.css';
 import Home from './Home.tsx';
+import './index.css';
 import Search from './Search.tsx';
 
 const queryClient = new QueryClient();

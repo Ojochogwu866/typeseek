@@ -44,7 +44,7 @@ export function DetailPanel({
 
 	return (
 		<aside
-			className={`border-line bg-surface text-primary [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb:hover]:bg-muted sticky top-4 max-h-[calc(100vh-2rem)] w-80 shrink-0 scrollbar-thin overflow-y-auto rounded-sm border p-5 motion-reduce:animate-none [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-lg [&::-webkit-scrollbar-track]:bg-transparent ${closing ? 'animate-panel-out' : 'animate-panel-in'}`}
+			className={`border-line bg-surface text-primary [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb:hover]:bg-muted static max-h-[calc(100vh-2rem)] w-full scrollbar-thin overflow-y-auto rounded-sm border p-5 motion-reduce:animate-none md:sticky md:top-4 md:w-80 md:shrink-0 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-lg [&::-webkit-scrollbar-track]:bg-transparent ${closing ? 'animate-panel-out' : 'animate-panel-in'}`}
 			style={{ height }}
 		>
 			<button

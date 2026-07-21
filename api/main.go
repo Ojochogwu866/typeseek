@@ -19,6 +19,7 @@ func main() {
 		db:                      db,
 		sidecar:                 newSidecarClient(cfg.SidecarURL),
 		minTextSearchConfidence: cfg.MinTextSearchConfidence,
+		googleClientID:          cfg.GoogleClientID,
 	}
 
 	mux := http.NewServeMux()
@@ -29,8 +30,7 @@ func main() {
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
-	mux.HandleFunc("POST /auth/signup", server.handleSignup)
-	mux.HandleFunc("POST /auth/login", server.handleLogin)
+	mux.HandleFunc("POST /auth/google", server.handleGoogleAuth)
 	mux.HandleFunc("POST /auth/logout", server.handleLogout)
 	mux.HandleFunc("GET /auth/me", server.handleMe)
 

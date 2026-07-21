@@ -1,10 +1,11 @@
 import { useMutation } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { searchByImage, searchByText } from './api/client';
 import type { SearchInput } from './api/types';
 import { AuthWidget } from './components/AuthWidget';
 import { DetailPanel } from './components/DetailPanel';
+import { Footer } from './components/Footer';
 import { LicenseFilter } from './components/LicenseFilter';
 import { ResultGrid } from './components/ResultGrid';
 import { SearchEmptyState } from './components/SearchEmptyState';
@@ -29,6 +30,7 @@ function runSearch(input: SearchInput, license: string) {
 function Search() {
 	const [selectedId, setSelectedId] = useState<number | null>(null);
 	const [license, setLicense] = useState('');
+	const [lastInput, setLastInput] = useState<SearchInput | null>(null);
 	const lastSelectedIdRef = useRef<number | null>(null);
 	if (selectedId !== null) lastSelectedIdRef.current = selectedId;
 
@@ -54,38 +56,52 @@ function Search() {
 
 	const runNewSearch = (input: SearchInput) => {
 		setSelectedId(null);
+		setLastInput(input);
 		searchMutation.mutate(input);
 	};
 
+	useEffect(() => {
+		if (!lastInput) return;
+		setSelectedId(null);
+		searchMutation.mutate(lastInput);
+	}, [license]);
+
 	return (
-		<div className="bg-page relative flex min-h-screen flex-col items-center px-6 py-12">
-			<div className="absolute top-5 right-6 text-[0.8rem]">
+		<div className="bg-page animate-page-in-right relative flex min-h-screen flex-col items-center px-4 py-8 motion-reduce:animate-none sm:px-6 sm:py-12">
+			<div className="mb-4 flex w-full justify-end text-[0.8rem] sm:absolute sm:top-5 sm:right-6 sm:mb-0 sm:w-auto">
 				<AuthWidget />
 			</div>
 
-			<h1 className="font-display text-primary m-0 text-[2.5rem] font-black tracking-[-0.02em]">
-				<Link to="/" className="no-underline">
+			<h1 className="font-display text-primary m-0 text-[2rem] font-black tracking-[-0.02em] sm:text-[2.5rem]">
+				<Link to="/" className="cursor-default no-underline select-none">
 					type<span className="text-muted font-normal">/</span>seek
 				</Link>
 			</h1>
 
-			<p className="text-secondary mt-5 max-w-135 text-center font-sans text-[1.1rem] leading-[1.6]">
+			<p className="text-secondary mt-4 max-w-135 text-center font-sans text-[1rem] leading-normal sm:mt-5 sm:text-[1.1rem] sm:leading-[1.6]">
 				Search by visual style, not conversation — describe letterforms, weight,
 				or mood, like "bold rounded sans-serif," or drop in an image instead.
 			</p>
 
-			<div className="mt-8 w-full max-w-155">
-				<SearchField onSearch={runNewSearch} disabled={searchMutation.isPending} />
+			<div className="mt-6 w-full max-w-155 sm:mt-8">
+				<SearchField
+					onSearch={runNewSearch}
+					disabled={searchMutation.isPending}
+				/>
 			</div>
 
 			<div className="mt-4 w-full max-w-155">
-				<LicenseFilter value={license} onChange={setLicense} disabled={searchMutation.isPending} />
+				<LicenseFilter
+					value={license}
+					onChange={setLicense}
+					disabled={searchMutation.isPending}
+				/>
 			</div>
 
 			{searchMutation.isIdle && <SearchEmptyState />}
 
 			{!searchMutation.isIdle && (
-				<div className="mt-10 flex w-full max-w-275 items-start gap-6">
+				<div className="mt-8 flex w-full max-w-275 flex-col items-start gap-4 sm:mt-10 md:flex-row md:gap-6">
 					<div className="flex min-w-0 flex-1 flex-col">
 						{showSkeleton && (
 							<>
@@ -131,6 +147,8 @@ function Search() {
 					)}
 				</div>
 			)}
+
+			<Footer />
 		</div>
 	);
 }

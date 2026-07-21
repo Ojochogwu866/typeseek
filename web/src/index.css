@@ -21,6 +21,8 @@
 	--animate-panel-in: panel-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 	--animate-panel-out: panel-out 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 	--animate-skeleton-pulse: skeleton-pulse 1.2s ease-in-out infinite;
+	--animate-page-in-right: page-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+	--animate-page-in-left: page-in-left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root {
@@ -105,6 +107,28 @@
 	to {
 		opacity: 0;
 		transform: translateX(48px);
+	}
+}
+
+@keyframes page-in-right {
+	from {
+		opacity: 0;
+		transform: translateX(24px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@keyframes page-in-left {
+	from {
+		opacity: 0;
+		transform: translateX(-24px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
 	}
 }
 

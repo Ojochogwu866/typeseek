@@ -1,10 +1,9 @@
 export function SearchEmptyState() {
 	return (
-		<div className="text-muted mt-12 flex flex-col items-center gap-4">
+		<div className="text-muted mt-8 flex flex-col items-center gap-4 sm:mt-12">
 			<svg
 				viewBox="0 0 120 120"
-				width="180"
-				height="180"
+				className="h-32.5 w-32.5 sm:h-45 sm:w-45"
 				fill="none"
 				xmlns="http://www.w3.org/2000/svg"
 				aria-hidden="true"

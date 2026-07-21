@@ -3,13 +3,13 @@ import type { FontResult } from '../api/types';
 export function fontCardLayoutClass(compact?: boolean) {
 	return compact
 		? 'card-grid w-full items-center gap-x-2 gap-y-[0.35rem] px-[0.85rem] py-[0.6rem] border-0 border-b border-line-faint last:border-b-0 bg-surface text-left [font:inherit] text-primary transition-colors duration-150'
-		: 'flex flex-row items-center gap-4 w-full px-4 py-3 border-0 border-b border-line-faint last:border-b-0 bg-surface text-left [font:inherit] text-primary transition-colors duration-150';
+		: 'flex flex-row items-center gap-2 sm:gap-4 w-full px-3 sm:px-4 py-3 border-0 border-b border-line-faint last:border-b-0 bg-surface text-left [font:inherit] text-primary transition-colors duration-150';
 }
 
 export function fontCardPreviewClass(compact?: boolean) {
 	return compact
 		? '[grid-area:preview] min-w-0 whitespace-nowrap overflow-hidden text-ellipsis text-primary text-xl'
-		: 'flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis text-primary text-2xl leading-[1.2]';
+		: 'flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis text-primary text-xl sm:text-2xl leading-[1.2]';
 }
 
 export function fontCardMetaClass(compact?: boolean) {

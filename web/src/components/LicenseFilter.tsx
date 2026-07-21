@@ -11,9 +11,17 @@ interface LicenseFilterProps {
 	disabled?: boolean;
 }
 
-export function LicenseFilter({ value, onChange, disabled }: LicenseFilterProps) {
+export function LicenseFilter({
+	value,
+	onChange,
+	disabled,
+}: LicenseFilterProps) {
 	return (
-		<div className="flex flex-wrap items-center justify-center gap-2" role="radiogroup" aria-label="Filter by license">
+		<div
+			className="flex flex-wrap items-center justify-center gap-2"
+			role="radiogroup"
+			aria-label="Filter by license"
+		>
 			{LICENSE_OPTIONS.map((option) => {
 				const isActive = value === option.value;
 				return (
@@ -24,7 +32,7 @@ export function LicenseFilter({ value, onChange, disabled }: LicenseFilterProps)
 						aria-checked={isActive}
 						disabled={disabled}
 						onClick={() => onChange(option.value)}
-						className={`px-3 py-1.5 rounded-full border text-[0.8rem] font-sans cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-default ${
+						className={`cursor-pointer rounded-full border px-3 py-1.5 font-sans text-[0.8rem] transition-colors disabled:cursor-default disabled:opacity-50 ${
 							isActive
 								? 'bg-primary text-page border-primary'
 								: 'bg-surface text-secondary border-line hover:border-secondary'

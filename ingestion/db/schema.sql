@@ -32,10 +32,11 @@ CREATE INDEX IF NOT EXISTS descriptions_tsv_idx
     ON descriptions USING gin (tsv);
 
 CREATE TABLE IF NOT EXISTS users (
-    id            SERIAL PRIMARY KEY,
-    email         TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    id         SERIAL PRIMARY KEY,
+    google_sub TEXT NOT NULL UNIQUE,
+    email      TEXT NOT NULL,
+    name       TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS sessions (

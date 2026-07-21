@@ -1,11 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-	getCurrentUser,
-	login,
-	logout,
-	signup,
-	type AuthUser,
-} from '../api/auth';
+import { getCurrentUser, googleAuth, logout, type AuthUser } from '../api/auth';
 
 const AUTH_QUERY_KEY = ['auth', 'me'];
 
@@ -17,14 +11,8 @@ export function useAuth() {
 		queryFn: getCurrentUser,
 	});
 
-	const loginMutation = useMutation({
-		mutationFn: login,
-		onSuccess: (user) =>
-			queryClient.setQueryData<AuthUser>(AUTH_QUERY_KEY, user),
-	});
-
-	const signupMutation = useMutation({
-		mutationFn: signup,
+	const googleAuthMutation = useMutation({
+		mutationFn: googleAuth,
 		onSuccess: (user) =>
 			queryClient.setQueryData<AuthUser>(AUTH_QUERY_KEY, user),
 	});
@@ -37,8 +25,7 @@ export function useAuth() {
 
 	return {
 		user: userQuery.data ?? null,
-		login: loginMutation,
-		signup: signupMutation,
+		googleAuth: googleAuthMutation,
 		logout: logoutMutation,
 	};
 }

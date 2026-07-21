@@ -19,6 +19,7 @@ type Server struct {
 	db                      *DB
 	sidecar                 *SidecarClient
 	minTextSearchConfidence float64
+	googleClientID          string
 }
 
 func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
