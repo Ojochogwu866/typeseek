@@ -1,24 +1,67 @@
-import { useEffect } from "react";
+import { useEffect, useState } from 'react';
 
-const LINK_ID = "typeseek-google-fonts";
+const LOAD_FALLBACK_TIMEOUT_MS = 3000;
+const KEY_SEPARATOR = ' ';
 
-/** Loads the given font families live from the Google Fonts CDN instead of static specimen images. */
-export function useGoogleFonts(fontNames: string[]) {
-  useEffect(() => {
-    if (fontNames.length === 0) return;
+const requestedFamilies = new Set<string>();
 
-    const families = fontNames
-      .map((name) => `family=${encodeURIComponent(name).replace(/%20/g, "+")}`)
-      .join("&");
-    const href = `https://fonts.googleapis.com/css2?${families}&display=swap`;
+/** Loads font families from Google Fonts and reports once they've actually finished (not just requested). */
+export function useGoogleFonts(fontNames: string[]): boolean {
+	const key = fontNames.join(KEY_SEPARATOR);
 
-    let link = document.getElementById(LINK_ID) as HTMLLinkElement | null;
-    if (!link) {
-      link = document.createElement("link");
-      link.id = LINK_ID;
-      link.rel = "stylesheet";
-      document.head.appendChild(link);
-    }
-    link.href = href;
-  }, [fontNames]);
+	const [ready, setReady] = useState(fontNames.length === 0);
+	const [trackedKey, setTrackedKey] = useState(key);
+
+	if (key !== trackedKey) {
+		setTrackedKey(key);
+		setReady(fontNames.length === 0);
+	}
+
+	useEffect(() => {
+		if (fontNames.length === 0) return;
+
+		let cancelled = false;
+
+		const newFamilies = fontNames.filter(
+			(name) => !requestedFamilies.has(name)
+		);
+		newFamilies.forEach((name) => requestedFamilies.add(name));
+
+		const waitForFonts = () => {
+			Promise.all(
+				fontNames.map((name) => document.fonts.load(`16px "${name}"`))
+			)
+				.catch(() => {})
+				.finally(() => {
+					if (!cancelled) setReady(true);
+				});
+		};
+
+		const fallback = setTimeout(() => {
+			if (!cancelled) setReady(true);
+		}, LOAD_FALLBACK_TIMEOUT_MS);
+
+		if (newFamilies.length === 0) {
+			waitForFonts();
+		} else {
+			const query = newFamilies
+				.map(
+					(name) => `family=${encodeURIComponent(name).replace(/%20/g, '+')}`
+				)
+				.join('&');
+			const link = document.createElement('link');
+			link.rel = 'stylesheet';
+			link.href = `https://fonts.googleapis.com/css2?${query}&display=swap`;
+			link.addEventListener('load', waitForFonts, { once: true });
+			document.head.appendChild(link);
+		}
+
+		return () => {
+			cancelled = true;
+			clearTimeout(fallback);
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [key]);
+
+	return ready;
 }

@@ -6,7 +6,7 @@ from pgvector.psycopg import register_vector
 from tqdm import tqdm
 
 from ingestion.catalog import load_catalog
-from ingestion.config import CATALOG_PATH, DATABASE_URL, EMBEDDINGS_DIR
+from ingestion.config import CATALOG_PATH, DATABASE_URL, EMBEDDINGS_DIR, TAGS_DIR
 from ingestion.logging_setup import get_logger
 from ingestion.models import FontFamily
 
@@ -60,11 +60,13 @@ def upsert_description(conn: psycopg.Connection, font_id: int, official_text: st
     )
 
 
-def load_family(conn: psycopg.Connection, family: FontFamily, embedding: np.ndarray | None) -> int:
+def load_family(
+    conn: psycopg.Connection, family: FontFamily, embedding: np.ndarray | None, llm_tags: str | None
+) -> int:
     font_id = upsert_font(conn, family)
     if embedding is not None:
         upsert_embedding(conn, font_id, embedding)
-    upsert_description(conn, font_id, official_text=f"{family.name} ({family.category})")
+    upsert_description(conn, font_id, official_text=f"{family.name} ({family.category})", llm_tags=llm_tags)
     return font_id
 
 
@@ -72,27 +74,38 @@ def main() -> None:
     families = load_catalog(CATALOG_PATH)
     conn = get_connection()
 
-    loaded = missing_embedding = failed = 0
+    loaded = missing_embedding = missing_tags = failed = 0
     for family in tqdm(families, desc="loading corpus"):
         embedding_path = EMBEDDINGS_DIR / f"{family.slug}.npy"
         embedding = np.load(embedding_path) if embedding_path.exists() else None
         if embedding is None:
             missing_embedding += 1
 
+        tags_path = TAGS_DIR / f"{family.slug}.txt"
+        llm_tags = tags_path.read_text() if tags_path.exists() else None
+        if llm_tags is None:
+            missing_tags += 1
+
         try:
-            load_family(conn, family, embedding)
+            load_family(conn, family, embedding, llm_tags)
         except psycopg.OperationalError:
             logger.warning("connection dropped while loading %s, reconnecting", family.name)
             conn = get_connection()
             try:
-                load_family(conn, family, embedding)
+                load_family(conn, family, embedding, llm_tags)
             except psycopg.OperationalError:
                 logger.warning("failed to load %s after reconnect", family.name, exc_info=True)
                 failed += 1
                 continue
         loaded += 1
 
-    logger.info("loaded %d families (%d without an embedding, %d failed)", loaded, missing_embedding, failed)
+    logger.info(
+        "loaded %d families (%d without an embedding, %d without tags, %d failed)",
+        loaded,
+        missing_embedding,
+        missing_tags,
+        failed,
+    )
 
 
 if __name__ == "__main__":

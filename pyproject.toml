@@ -28,6 +28,9 @@ serve = [
     "uvicorn>=0.30",
     "python-multipart>=0.0.9",
 ]
+enrich = [
+    "anthropic>=0.40",
+]
 
 [tool.setuptools.packages.find]
 include = ["ingestion*", "sidecar*"]

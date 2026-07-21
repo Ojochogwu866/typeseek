@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -15,8 +16,9 @@ const (
 )
 
 type Server struct {
-	db      *DB
-	sidecar *SidecarClient
+	db                      *DB
+	sidecar                 *SidecarClient
+	minTextSearchConfidence float64
 }
 
 func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
@@ -46,9 +48,56 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := s.db.SearchByVector(r.Context(), vector, defaultSearchLimit)
+	license := r.FormValue("license")
+	results, err := s.db.SearchByVector(r.Context(), vector, license, defaultSearchLimit)
 	if err != nil {
 		log.Printf("search query failed: %v", err)
+		writeError(w, http.StatusInternalServerError, "search failed")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, results)
+}
+
+type searchTextRequest struct {
+	Query   string `json:"query"`
+	License string `json:"license"`
+}
+
+func (s *Server) handleSearchText(w http.ResponseWriter, r *http.Request) {
+	var body searchTextRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "could not parse request body")
+		return
+	}
+
+	query := strings.TrimSpace(body.Query)
+	if query == "" {
+		writeError(w, http.StatusBadRequest, `"query" must not be empty`)
+		return
+	}
+
+	vector, err := s.sidecar.EmbedText(query)
+	if err != nil {
+		log.Printf("sidecar embed failed: %v", err)
+		writeError(w, http.StatusBadGateway, "embedding service unavailable")
+		return
+	}
+
+	topSimilarity, err := s.db.TopVectorSimilarity(r.Context(), vector)
+	if err != nil {
+		log.Printf("confidence check failed: %v", err)
+		writeError(w, http.StatusInternalServerError, "search failed")
+		return
+	}
+	if topSimilarity < s.minTextSearchConfidence {
+		writeJSON(w, http.StatusOK, []FontResult{})
+		return
+	}
+
+	results, err := s.db.SearchByText(r.Context(), vector, query, body.License, defaultSearchLimit)
+	if err != nil {
+		log.Printf("text search query failed: %v", err)
 		writeError(w, http.StatusInternalServerError, "search failed")
 		return
 	}

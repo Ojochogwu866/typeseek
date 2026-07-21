@@ -16,17 +16,23 @@ func main() {
 	}
 
 	server := &Server{
-		db:      db,
-		sidecar: newSidecarClient(cfg.SidecarURL),
+		db:                      db,
+		sidecar:                 newSidecarClient(cfg.SidecarURL),
+		minTextSearchConfidence: cfg.MinTextSearchConfidence,
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /search", server.handleSearch)
+	mux.HandleFunc("POST /search/text", server.handleSearchText)
 	mux.HandleFunc("GET /fonts/{id}", server.handleGetFont)
 	mux.HandleFunc("GET /fonts/{id}/neighbors", server.handleNeighbors)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
+	mux.HandleFunc("POST /auth/signup", server.handleSignup)
+	mux.HandleFunc("POST /auth/login", server.handleLogin)
+	mux.HandleFunc("POST /auth/logout", server.handleLogout)
+	mux.HandleFunc("GET /auth/me", server.handleMe)
 
 	log.Printf("listening on :%s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, withCORS(mux)))

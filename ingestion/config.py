@@ -10,10 +10,12 @@ DATA_DIR = ROOT_DIR / "data"
 FONTS_DIR = DATA_DIR / "fonts"
 SPECIMENS_DIR = DATA_DIR / "specimens"
 EMBEDDINGS_DIR = DATA_DIR / "embeddings"
+TAGS_DIR = DATA_DIR / "tags"
 CATALOG_PATH = DATA_DIR / "fonts.json"
 
 GOOGLE_FONTS_API_KEY = os.environ.get("GOOGLE_FONTS_API_KEY", "")
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 R2_ENDPOINT_URL = os.environ.get("R2_ENDPOINT_URL", "")
 R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID", "")
@@ -32,3 +34,5 @@ EMBEDDING_DIM = 768
 
 GLYPH_SAMPLE = "Rag"
 PANGRAM = "The quick brown fox jumps over the lazy dog"
+
+ENRICHMENT_MODEL = "claude-haiku-4-5-20251001"
