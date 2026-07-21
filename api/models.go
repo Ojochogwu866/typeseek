@@ -8,3 +8,8 @@ type FontResult struct {
 	SourceURL  string  `json:"source_url"`
 	Similarity float64 `json:"similarity,omitempty"`
 }
+
+// RegionResult groups the results for one detected lettering region within an image
+type RegionResult struct {
+	Results []FontResult `json:"results"`
+}

@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { searchByImage, searchByText } from './api/client';
-import type { SearchInput } from './api/types';
+import type { RegionResult, SearchInput } from './api/types';
 import { AuthWidget } from './components/AuthWidget';
 import { DetailPanel } from './components/DetailPanel';
 import { Footer } from './components/Footer';
@@ -20,11 +20,17 @@ const RESULTS_HEIGHT = 460;
 const SLOW_REQUEST_HINT_DELAY_MS = 4000;
 // Must match .animate-panel-out's duration in index.css.
 const DETAIL_PANEL_EXIT_MS = 300;
+const regionHeadingClass = 'text-muted text-[0.85rem] font-sans uppercase tracking-[0.05em]';
 
-function runSearch(input: SearchInput, license: string) {
-	return input.mode === 'image'
-		? searchByImage(input.file, license)
-		: searchByText(input.query, license);
+// Text search always produces exactly one group; image search may detect more than
+// one lettering region. Normalizing both to RegionResult[] here means everything
+// downstream — skeleton gating, font preloading, rendering — only has to handle
+// "one or more groups," and text search's behavior never changes.
+function runSearch(input: SearchInput, license: string): Promise<RegionResult[]> {
+	if (input.mode === 'image') {
+		return searchByImage(input.file, license);
+	}
+	return searchByText(input.query, license).then((results) => [{ results }]);
 }
 
 function Search() {
@@ -48,11 +54,13 @@ function Search() {
 		SLOW_REQUEST_HINT_DELAY_MS
 	);
 
-	const results = searchMutation.data ?? [];
-	const fontsReady = useGoogleFonts(results.map((font) => font.name));
+	const regions = searchMutation.data ?? [];
+	const totalResults = regions.reduce((sum, region) => sum + region.results.length, 0);
+	const fontsReady = useGoogleFonts(regions.flatMap((region) => region.results.map((font) => font.name)));
 	const showSkeleton =
 		searchMutation.isPending ||
-		(searchMutation.isSuccess && results.length > 0 && !fontsReady);
+		(searchMutation.isSuccess && totalResults > 0 && !fontsReady);
+	const showRegionHeadings = regions.length > 1;
 
 	const runNewSearch = (input: SearchInput) => {
 		setSelectedId(null);
@@ -102,7 +110,7 @@ function Search() {
 
 			{!searchMutation.isIdle && (
 				<div className="mt-8 flex w-full max-w-275 flex-col items-start gap-4 sm:mt-10 md:flex-row md:gap-6">
-					<div className="flex min-w-0 flex-1 flex-col">
+					<div className="flex min-w-0 flex-1 flex-col gap-8">
 						{showSkeleton && (
 							<>
 								<SkeletonList />
@@ -119,20 +127,28 @@ function Search() {
 								{(searchMutation.error as Error).message}
 							</StateMessage>
 						)}
-						{searchMutation.isSuccess && results.length === 0 && (
+						{!showSkeleton && searchMutation.isSuccess && totalResults === 0 && (
 							<StateMessage variant="bordered">
 								No matching fonts found. Try a different image or description.
 							</StateMessage>
 						)}
 						{!showSkeleton &&
 							searchMutation.isSuccess &&
-							results.length > 0 && (
-								<ResultGrid
-									results={results}
-									onSelect={setSelectedId}
-									scrollable
-									height={RESULTS_HEIGHT}
-								/>
+							totalResults > 0 &&
+							regions.map((region, i) =>
+								region.results.length === 0 ? null : (
+									<div key={i} className="flex flex-col gap-3">
+										{showRegionHeadings && (
+											<h2 className={regionHeadingClass}>Region {i + 1}</h2>
+										)}
+										<ResultGrid
+											results={region.results}
+											onSelect={setSelectedId}
+											scrollable
+											height={RESULTS_HEIGHT}
+										/>
+									</div>
+								)
 							)}
 					</div>
 

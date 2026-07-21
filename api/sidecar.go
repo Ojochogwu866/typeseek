@@ -26,7 +26,43 @@ type embedResponse struct {
 	Vector []float32 `json:"vector"`
 }
 
+type embedRegionsResponse struct {
+	Vectors [][]float32 `json:"vectors"`
+}
+
 func (c *SidecarClient) EmbedImage(filename string, data []byte) ([]float32, error) {
+	req, err := c.newImageUploadRequest("/embed-image", filename, data)
+	if err != nil {
+		return nil, err
+	}
+	return c.doEmbed(req)
+}
+
+func (c *SidecarClient) EmbedImageRegions(filename string, data []byte) ([][]float32, error) {
+	req, err := c.newImageUploadRequest("/embed-image-regions", filename, data)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("sidecar returned %d: %s", resp.StatusCode, body)
+	}
+
+	var parsed embedRegionsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return nil, err
+	}
+	return parsed.Vectors, nil
+}
+
+func (c *SidecarClient) newImageUploadRequest(path, filename string, data []byte) (*http.Request, error) {
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 	part, err := writer.CreateFormFile("file", filename)
@@ -40,13 +76,12 @@ func (c *SidecarClient) EmbedImage(filename string, data []byte) ([]float32, err
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, c.baseURL+"/embed-image", &body)
+	req, err := http.NewRequest(http.MethodPost, c.baseURL+path, &body)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	return c.doEmbed(req)
+	return req, nil
 }
 
 func (c *SidecarClient) EmbedText(text string) ([]float32, error) {

@@ -78,6 +78,11 @@ func generateSessionToken() (string, error) {
 }
 
 func (s *Server) handleGoogleAuth(w http.ResponseWriter, r *http.Request) {
+	if s.googleClientID == "" {
+		writeError(w, http.StatusServiceUnavailable, "Google sign-in is not configured")
+		return
+	}
+
 	var body googleAuthRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "could not parse request body")

@@ -27,7 +27,7 @@ func loadConfig() Config {
 		SidecarURL:              envOrDefault("SIDECAR_URL", "http://127.0.0.1:8001"),
 		Port:                    envOrDefault("PORT", "8080"),
 		MinTextSearchConfidence: envFloatOrDefault("MIN_TEXT_SEARCH_CONFIDENCE", 0.15),
-		GoogleClientID:          mustEnv("GOOGLE_CLIENT_ID"),
+		GoogleClientID:          envOrDefault("GOOGLE_CLIENT_ID", ""),
 	}
 }
 

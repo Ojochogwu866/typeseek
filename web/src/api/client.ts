@@ -1,14 +1,14 @@
 import { API_URL, request } from './http';
-import type { FontResult } from './types';
+import type { FontResult, RegionResult } from './types';
 
 export async function searchByImage(
 	file: File,
 	license?: string
-): Promise<FontResult[]> {
+): Promise<RegionResult[]> {
 	const form = new FormData();
 	form.append('image', file);
 	if (license) form.append('license', license);
-	return request<FontResult[]>(`${API_URL}/search`, {
+	return request<RegionResult[]>(`${API_URL}/search`, {
 		method: 'POST',
 		body: form,
 	});

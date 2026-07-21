@@ -15,6 +15,10 @@ func main() {
 		log.Fatalf("could not connect to database: %v", err)
 	}
 
+	if cfg.GoogleClientID == "" {
+		log.Println("GOOGLE_CLIENT_ID is not set — Google sign-in will be unavailable")
+	}
+
 	server := &Server{
 		db:                      db,
 		sidecar:                 newSidecarClient(cfg.SidecarURL),

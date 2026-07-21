@@ -9,3 +9,7 @@ export interface FontResult {
 
 export type SearchInput =
 	{ mode: 'image'; file: File } | { mode: 'text'; query: string };
+
+export interface RegionResult {
+	results: FontResult[];
+}
