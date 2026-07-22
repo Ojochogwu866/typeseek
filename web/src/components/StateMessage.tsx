@@ -15,7 +15,7 @@ export function StateMessage({
 	const classes = [
 		'flex items-center justify-center gap-2 text-muted text-[0.9rem] text-center',
 		variant === 'bordered'
-			? 'flex-1 min-h-30 p-8 border border-line-faint rounded-sm'
+			? 'w-full flex-1 min-h-30 p-8 border border-line-faint rounded-sm'
 			: 'min-h-15 py-4',
 		tone === 'error' ? 'text-error' : '',
 	]

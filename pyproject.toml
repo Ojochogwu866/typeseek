@@ -28,6 +28,7 @@ serve = [
     "uvicorn>=0.30",
     "python-multipart>=0.0.9",
     "anthropic>=0.40",
+    "pillow-heif>=0.18",
 ]
 enrich = [
     "anthropic>=0.40",

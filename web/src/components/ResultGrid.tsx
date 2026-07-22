@@ -49,7 +49,7 @@ export function ResultGrid({
 	}, [scrollable, results, height]);
 
 	const grid = (
-		<div className="border-line-faint flex flex-col overflow-hidden rounded-sm border">
+		<div className="border-line-faint flex w-full min-w-0 flex-col overflow-hidden rounded-sm border">
 			{results.map((font) => (
 				<FontCard
 					key={font.id}
@@ -64,9 +64,9 @@ export function ResultGrid({
 	if (!scrollable) return grid;
 
 	return (
-		<div className="flex flex-col">
+		<div className="flex w-full min-w-0 flex-col">
 			<div
-				className="[&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb:hover]:bg-muted scrollbar-thin overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-lg [&::-webkit-scrollbar-track]:bg-transparent"
+				className="w-full min-w-0 [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb:hover]:bg-muted scrollbar-thin overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-lg [&::-webkit-scrollbar-track]:bg-transparent"
 				ref={scrollRef}
 				style={{ height }}
 			>

@@ -35,7 +35,12 @@ export function SearchField({ onSearch, disabled }: SearchFieldProps) {
 		(candidate: File | undefined) => {
 			if (disabled || !candidate) return;
 
-			if (!candidate.type.startsWith('image/')) {
+			// Some browsers report an empty MIME type for .heic/.heif (iPhone's default photo
+			// format), so fall back to checking the extension when the type is blank.
+			const looksLikeImage =
+				candidate.type.startsWith('image/') ||
+				(candidate.type === '' && /\.(heic|heif)$/i.test(candidate.name));
+			if (!looksLikeImage) {
 				setError('Please upload an image file.');
 				return;
 			}
@@ -161,7 +166,7 @@ export function SearchField({ onSearch, disabled }: SearchFieldProps) {
 				<input
 					ref={fileInputRef}
 					type="file"
-					accept="image/*"
+					accept="image/*,.heic,.heif"
 					hidden
 					disabled={disabled}
 					onChange={(event) => {

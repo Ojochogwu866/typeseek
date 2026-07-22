@@ -112,7 +112,7 @@ function Search() {
 
 			{!searchMutation.isIdle && (
 				<div className="mt-8 flex w-full max-w-275 flex-col items-start gap-4 sm:mt-10 md:flex-row md:gap-6">
-					<div className="flex min-w-0 flex-1 flex-col gap-8">
+					<div className="flex w-full min-w-0 flex-1 flex-col gap-8">
 						{showSkeleton && (
 							<>
 								<SkeletonList />
@@ -139,7 +139,7 @@ function Search() {
 							totalResults > 0 &&
 							regions.map((region, i) =>
 								region.results.length === 0 ? null : (
-									<div key={i} className="flex flex-col gap-3">
+									<div key={i} className="flex w-full min-w-0 flex-col gap-3">
 										{showRegionHeadings && (
 											<h2 className={regionHeadingClass}>Region {i + 1}</h2>
 										)}

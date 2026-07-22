@@ -5,12 +5,15 @@ Run with: uvicorn sidecar.main:app --host 0.0.0.0 --port 8001
 
 from io import BytesIO
 
+import pillow_heif
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel
 
 from ingestion.detect_regions import detect_regions
 from ingestion.embed import embed_pil_image, embed_text
+
+pillow_heif.register_heif_opener()  # lets Image.open() decode .heic/.heif uploads (iPhone default)
 
 app = FastAPI(title="typeseek embedding sidecar")
 

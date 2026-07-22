@@ -16,7 +16,7 @@ interface SkeletonListProps {
 export function SkeletonList({ rows = 5, compact = false }: SkeletonListProps) {
 	return (
 		<div
-			className="border-line-faint flex flex-col overflow-hidden rounded-sm border"
+			className="border-line-faint flex w-full min-w-0 flex-col overflow-hidden rounded-sm border"
 			aria-hidden="true"
 		>
 			{Array.from({ length: rows }).map((_, i) => (
