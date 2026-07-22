@@ -2,14 +2,12 @@
 FROM python:3.11-slim
 WORKDIR /app
 
-# CPU-only wheels — the default PyPI torch build pulls in multi-GB CUDA deps that a
-# CPU-only VPS will never use.
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
-
 COPY pyproject.toml ./
 COPY ingestion/ ./ingestion/
 COPY sidecar/ ./sidecar/
-RUN pip install --no-cache-dir -e ".[embed,serve]"
+
+# --extra-index-url (not --index-url) resolves torch as CPU-only while everything else still comes from PyPI, in one pass.
+RUN pip install --no-cache-dir -e ".[embed,serve]" --extra-index-url https://download.pytorch.org/whl/cpu
 
 EXPOSE 8001
 CMD ["uvicorn", "sidecar.main:app", "--host", "0.0.0.0", "--port", "8001"]
