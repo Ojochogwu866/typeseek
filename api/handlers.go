@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log"
@@ -15,9 +16,28 @@ const (
 	maxUploadBytes       = 10 << 20 // 10MB
 )
 
+// Store is everything the handlers need from *DB — lets tests inject a fake.
+type Store interface {
+	SearchByVector(ctx context.Context, vec []float32, license string, limit int) ([]FontResult, error)
+	SearchByText(ctx context.Context, vec []float32, query, license string, limit int) ([]FontResult, error)
+	TopVectorSimilarity(ctx context.Context, vec []float32) (float64, error)
+	GetFont(ctx context.Context, id int64) (*FontResult, error)
+	Neighbors(ctx context.Context, id int64, limit int) ([]FontResult, error)
+	UpsertGoogleUser(ctx context.Context, sub, email, name string) (int64, error)
+	CreateSession(ctx context.Context, userID int64) (string, error)
+	GetUserBySession(ctx context.Context, token string) (*User, error)
+	DeleteSession(ctx context.Context, token string) error
+}
+
+// Embedder is the subset of *SidecarClient the handlers need — lets tests inject a fake.
+type Embedder interface {
+	EmbedImageRegions(filename string, data []byte) ([]RegionEmbedding, error)
+	EmbedText(text string) ([]float32, error)
+}
+
 type Server struct {
-	db                      *DB
-	sidecar                 *SidecarClient
+	db                      Store
+	sidecar                 Embedder
 	minTextSearchConfidence float64
 	googleClientID          string
 }
