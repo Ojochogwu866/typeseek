@@ -12,6 +12,7 @@ import { SearchEmptyState } from './components/SearchEmptyState';
 import { SearchField } from './components/SearchField';
 import { SkeletonList } from './components/SkeletonList';
 import { StateMessage } from './components/StateMessage';
+import { ThemeToggle } from './components/ThemeToggle';
 import { useDelayedFlag } from './hooks/useDelayedFlag';
 import { useDelayedUnmount } from './hooks/useDelayedUnmount';
 import { useGoogleFonts } from './hooks/useGoogleFonts';
@@ -76,7 +77,8 @@ function Search() {
 
 	return (
 		<div className="bg-page animate-page-in-right relative flex min-h-screen flex-col items-center px-4 py-8 motion-reduce:animate-none sm:px-6 sm:py-12">
-			<div className="mb-4 flex w-full justify-end text-[0.8rem] sm:absolute sm:top-5 sm:right-6 sm:mb-0 sm:w-auto">
+			<div className="mb-4 flex w-full items-center justify-end gap-3 text-[0.8rem] sm:absolute sm:top-5 sm:right-6 sm:mb-0 sm:w-auto">
+				<ThemeToggle />
 				<AuthWidget />
 			</div>
 

@@ -63,6 +63,43 @@
 	}
 }
 
+/* Explicit overrides win regardless of OS preference — set by the manual theme toggle. */
+:root[data-theme='light'] {
+	--bg: #ebe5d9;
+	--surface: #f3efe4;
+	--surface-hover: #ece5d4;
+	--border: #d9d1bd;
+	--border-faint: #e4dece;
+
+	--text-primary: #26221c;
+	--text-secondary: #6f6858;
+	--text-muted: #9a927e;
+
+	--license-ok-bg: #dcead9;
+	--license-ok-text: #2f6b3f;
+	--similarity-bg: #dde3f0;
+	--similarity-text: #33447a;
+	--error-text: #a5382f;
+}
+
+:root[data-theme='dark'] {
+	--bg: #202126;
+	--surface: #161618;
+	--surface-hover: #1c1c1f;
+	--border: #3d3d47;
+	--border-faint: #29292f;
+
+	--text-primary: #edecef;
+	--text-secondary: #a0a0a8;
+	--text-muted: #6c6c74;
+
+	--license-ok-bg: #1c2a20;
+	--license-ok-text: #8fc99f;
+	--similarity-bg: #202631;
+	--similarity-text: #92a3c9;
+	--error-text: #d98686;
+}
+
 @layer base {
 	body {
 		font: 16px/1.5 var(--font-sans);

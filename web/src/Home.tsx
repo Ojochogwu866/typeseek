@@ -1,12 +1,17 @@
 import { useNavigate } from 'react-router-dom';
 import { Footer } from './components/Footer';
 import { ArrowRightIcon } from './components/icons';
+import { ThemeToggle } from './components/ThemeToggle';
 
 function Home() {
 	const navigate = useNavigate();
 
 	return (
-		<div className="bg-page animate-page-in-left flex min-h-screen flex-col items-center px-4 py-10 motion-reduce:animate-none sm:px-6 sm:py-16">
+		<div className="bg-page animate-page-in-left relative flex min-h-screen flex-col items-center px-4 py-10 motion-reduce:animate-none sm:px-6 sm:py-16">
+			<div className="mb-4 flex w-full justify-end sm:absolute sm:top-5 sm:right-6 sm:mb-0 sm:w-auto">
+				<ThemeToggle />
+			</div>
+
 			<div className="flex flex-1 flex-col items-center justify-center gap-6 sm:gap-8">
 				<h1 className="font-display text-primary m-0 cursor-default text-center text-[3rem] font-black tracking-[-0.02em] select-none sm:text-[4.5rem] md:text-[6rem] lg:text-[8rem]">
 					type<span className="text-muted font-normal">/</span>seek

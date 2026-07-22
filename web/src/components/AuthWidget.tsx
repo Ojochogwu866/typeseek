@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 
 const GSI_SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
 
@@ -8,6 +9,7 @@ const linkClass =
 
 export function AuthWidget() {
 	const { user, googleAuth, logout } = useAuth();
+	const { theme } = useTheme();
 	const buttonRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
@@ -27,8 +29,9 @@ export function AuthWidget() {
 				client_id: clientId,
 				callback: (response) => googleAuth.mutate(response.credential),
 			});
+			buttonRef.current.innerHTML = '';
 			window.google.accounts.id.renderButton(buttonRef.current, {
-				theme: 'outline',
+				theme: theme === 'dark' ? 'filled_black' : 'outline',
 				size: 'medium',
 				text: 'signin_with',
 			});
@@ -44,7 +47,7 @@ export function AuthWidget() {
 		);
 		script?.addEventListener('load', renderButton);
 		return () => script?.removeEventListener('load', renderButton);
-	}, [user, googleAuth]);
+	}, [user, googleAuth, theme]);
 
 	if (user) {
 		return (
