@@ -1,0 +1,8 @@
+.venv/
+.git/
+data/
+web/
+*.md
+*.pdf
+.env
+.env.example

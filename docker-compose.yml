@@ -1,0 +1,23 @@
+services:
+  sidecar:
+    build:
+      context: .
+      dockerfile: sidecar/Dockerfile
+    restart: unless-stopped
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+
+  api:
+    build:
+      context: ./api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SIDECAR_URL: http://sidecar:8001
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      MIN_TEXT_SEARCH_CONFIDENCE: ${MIN_TEXT_SEARCH_CONFIDENCE:-0.15}
+      PORT: "8080"
+    depends_on:
+      - sidecar
