@@ -3,6 +3,7 @@
 Run with: uvicorn sidecar.main:app --host 0.0.0.0 --port 8001
 """
 
+import base64
 from io import BytesIO
 
 import pillow_heif
@@ -17,6 +18,8 @@ pillow_heif.register_heif_opener()  # lets Image.open() decode .heic/.heif uploa
 
 app = FastAPI(title="typeseek embedding sidecar")
 
+THUMBNAIL_MAX_DIMENSION = 160
+
 
 class TextEmbedRequest(BaseModel):
     text: str
@@ -26,8 +29,13 @@ class EmbedResponse(BaseModel):
     vector: list[float]
 
 
+class RegionEmbedding(BaseModel):
+    vector: list[float]
+    thumbnail: str
+
+
 class EmbedRegionsResponse(BaseModel):
-    vectors: list[list[float]]
+    regions: list[RegionEmbedding]
 
 
 def _region_box(region: dict, width: int, height: int) -> tuple[int, int, int, int]:
@@ -40,6 +48,14 @@ def _region_box(region: dict, width: int, height: int) -> tuple[int, int, int, i
     right = max(left + 1, int((x + w) * width))
     lower = max(upper + 1, int((y + h) * height))
     return left, upper, right, lower
+
+
+def _thumbnail_base64(crop) -> str:
+    thumb = crop.copy()
+    thumb.thumbnail((THUMBNAIL_MAX_DIMENSION, THUMBNAIL_MAX_DIMENSION))
+    buf = BytesIO()
+    thumb.convert("RGB").save(buf, format="JPEG", quality=70)
+    return base64.standard_b64encode(buf.getvalue()).decode("ascii")
 
 
 @app.get("/health")
@@ -70,17 +86,21 @@ async def embed_image_regions_endpoint(file: UploadFile = File(...)) -> EmbedReg
         raise HTTPException(status_code=400, detail="could not decode image")
 
     regions = detect_regions(image)
+    # Largest area first — index 0 becomes the "primary" region.
+    regions.sort(key=lambda r: r.get("width", 1.0) * r.get("height", 1.0), reverse=True)
 
+    embeddings: list[RegionEmbedding] = []
     if len(regions) == 1:
-        vectors = [embed_pil_image(image)]
+        vector = embed_pil_image(image)
+        embeddings.append(RegionEmbedding(vector=vector.tolist(), thumbnail=_thumbnail_base64(image)))
     else:
         width, height = image.size
-        vectors = []
         for region in regions:
-            box = _region_box(region, width, height)
-            vectors.append(embed_pil_image(image.crop(box)))
+            crop = image.crop(_region_box(region, width, height))
+            vector = embed_pil_image(crop)
+            embeddings.append(RegionEmbedding(vector=vector.tolist(), thumbnail=_thumbnail_base64(crop)))
 
-    return EmbedRegionsResponse(vectors=[v.tolist() for v in vectors])
+    return EmbedRegionsResponse(regions=embeddings)
 
 
 @app.post("/embed-text", response_model=EmbedResponse)

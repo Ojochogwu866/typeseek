@@ -12,4 +12,5 @@ export type SearchInput =
 
 export interface RegionResult {
 	results: FontResult[];
+	thumbnail?: string;
 }

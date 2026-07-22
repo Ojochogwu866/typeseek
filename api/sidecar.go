@@ -26,8 +26,14 @@ type embedResponse struct {
 	Vector []float32 `json:"vector"`
 }
 
+// RegionEmbedding pairs one region's embedding with a base64 JPEG preview thumbnail.
+type RegionEmbedding struct {
+	Vector    []float32 `json:"vector"`
+	Thumbnail string    `json:"thumbnail"`
+}
+
 type embedRegionsResponse struct {
-	Vectors [][]float32 `json:"vectors"`
+	Regions []RegionEmbedding `json:"regions"`
 }
 
 func (c *SidecarClient) EmbedImage(filename string, data []byte) ([]float32, error) {
@@ -38,7 +44,7 @@ func (c *SidecarClient) EmbedImage(filename string, data []byte) ([]float32, err
 	return c.doEmbed(req)
 }
 
-func (c *SidecarClient) EmbedImageRegions(filename string, data []byte) ([][]float32, error) {
+func (c *SidecarClient) EmbedImageRegions(filename string, data []byte) ([]RegionEmbedding, error) {
 	req, err := c.newImageUploadRequest("/embed-image-regions", filename, data)
 	if err != nil {
 		return nil, err
@@ -59,7 +65,7 @@ func (c *SidecarClient) EmbedImageRegions(filename string, data []byte) ([][]flo
 	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
 		return nil, err
 	}
-	return parsed.Vectors, nil
+	return parsed.Regions, nil
 }
 
 func (c *SidecarClient) newImageUploadRequest(path, filename string, data []byte) (*http.Request, error) {

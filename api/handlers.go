@@ -42,7 +42,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vectors, err := s.sidecar.EmbedImageRegions(header.Filename, data)
+	embeddings, err := s.sidecar.EmbedImageRegions(header.Filename, data)
 	if err != nil {
 		log.Printf("sidecar embed failed: %v", err)
 		writeError(w, http.StatusBadGateway, "embedding service unavailable")
@@ -50,15 +50,15 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	license := r.FormValue("license")
-	regions := make([]RegionResult, 0, len(vectors))
-	for _, vector := range vectors {
-		results, err := s.db.SearchByVector(r.Context(), vector, license, defaultSearchLimit)
+	regions := make([]RegionResult, 0, len(embeddings))
+	for _, embedding := range embeddings {
+		results, err := s.db.SearchByVector(r.Context(), embedding.Vector, license, defaultSearchLimit)
 		if err != nil {
 			log.Printf("search query failed: %v", err)
 			writeError(w, http.StatusInternalServerError, "search failed")
 			return
 		}
-		regions = append(regions, RegionResult{Results: results})
+		regions = append(regions, RegionResult{Results: results, Thumbnail: embedding.Thumbnail})
 	}
 
 	writeJSON(w, http.StatusOK, regions)

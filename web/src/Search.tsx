@@ -7,6 +7,7 @@ import { AuthWidget } from './components/AuthWidget';
 import { DetailPanel } from './components/DetailPanel';
 import { Footer } from './components/Footer';
 import { LicenseFilter } from './components/LicenseFilter';
+import { RegionChip } from './components/RegionChip';
 import { ResultGrid } from './components/ResultGrid';
 import { SearchEmptyState } from './components/SearchEmptyState';
 import { SearchField } from './components/SearchField';
@@ -21,12 +22,8 @@ const RESULTS_HEIGHT = 460;
 const SLOW_REQUEST_HINT_DELAY_MS = 4000;
 // Must match .animate-panel-out's duration in index.css.
 const DETAIL_PANEL_EXIT_MS = 300;
-const regionHeadingClass = 'text-muted text-[0.85rem] font-sans uppercase tracking-[0.05em]';
 
-// Text search always produces exactly one group; image search may detect more than
-// one lettering region. Normalizing both to RegionResult[] here means everything
-// downstream — skeleton gating, font preloading, rendering — only has to handle
-// "one or more groups," and text search's behavior never changes.
+// Normalizes both modes to RegionResult[]; text search is always a single group.
 function runSearch(input: SearchInput, license: string): Promise<RegionResult[]> {
 	if (input.mode === 'image') {
 		return searchByImage(input.file, license);
@@ -36,6 +33,7 @@ function runSearch(input: SearchInput, license: string): Promise<RegionResult[]>
 
 function Search() {
 	const [selectedId, setSelectedId] = useState<number | null>(null);
+	const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 	const [license, setLicense] = useState('');
 	const [lastInput, setLastInput] = useState<SearchInput | null>(null);
 	const lastSelectedIdRef = useRef<number | null>(null);
@@ -56,15 +54,20 @@ function Search() {
 	);
 
 	const regions = searchMutation.data ?? [];
+	const primary = regions[0];
+	const secondary = regions
+		.map((region, index) => ({ region, index }))
+		.slice(1)
+		.filter(({ region }) => region.results.length > 0);
 	const totalResults = regions.reduce((sum, region) => sum + region.results.length, 0);
 	const fontsReady = useGoogleFonts(regions.flatMap((region) => region.results.map((font) => font.name)));
 	const showSkeleton =
 		searchMutation.isPending ||
 		(searchMutation.isSuccess && totalResults > 0 && !fontsReady);
-	const showRegionHeadings = regions.length > 1;
 
 	const runNewSearch = (input: SearchInput) => {
 		setSelectedId(null);
+		setExpandedIndex(null);
 		setLastInput(input);
 		searchMutation.mutate(input);
 	};
@@ -72,6 +75,7 @@ function Search() {
 	useEffect(() => {
 		if (!lastInput) return;
 		setSelectedId(null);
+		setExpandedIndex(null);
 		searchMutation.mutate(lastInput);
 	}, [license]);
 
@@ -134,24 +138,47 @@ function Search() {
 								No matching fonts found. Try a different image or description.
 							</StateMessage>
 						)}
-						{!showSkeleton &&
-							searchMutation.isSuccess &&
-							totalResults > 0 &&
-							regions.map((region, i) =>
-								region.results.length === 0 ? null : (
-									<div key={i} className="flex w-full min-w-0 flex-col gap-3">
-										{showRegionHeadings && (
-											<h2 className={regionHeadingClass}>Region {i + 1}</h2>
+						{!showSkeleton && searchMutation.isSuccess && totalResults > 0 && (
+							<>
+								{primary && primary.results.length > 0 && (
+									<ResultGrid
+										results={primary.results}
+										onSelect={setSelectedId}
+										scrollable
+										height={RESULTS_HEIGHT}
+									/>
+								)}
+
+								{secondary.length > 0 && (
+									<div className="flex w-full min-w-0 flex-col gap-3">
+										<p className="text-muted text-[0.8rem] font-sans">
+											Other lettering styles found in this photo
+										</p>
+										<div className="flex flex-wrap gap-2">
+											{secondary.map(({ region, index }) => (
+												<RegionChip
+													key={index}
+													thumbnail={region.thumbnail ?? ''}
+													label={region.results[0]?.name ?? 'Unknown'}
+													isActive={expandedIndex === index}
+													onClick={() =>
+														setExpandedIndex(expandedIndex === index ? null : index)
+													}
+												/>
+											))}
+										</div>
+										{expandedIndex !== null && regions[expandedIndex] && (
+											<ResultGrid
+												results={regions[expandedIndex].results}
+												onSelect={setSelectedId}
+												scrollable
+												height={RESULTS_HEIGHT}
+											/>
 										)}
-										<ResultGrid
-											results={region.results}
-											onSelect={setSelectedId}
-											scrollable
-											height={RESULTS_HEIGHT}
-										/>
 									</div>
-								)
-							)}
+								)}
+							</>
+						)}
 					</div>
 
 					{shouldRenderDetail && lastSelectedIdRef.current !== null && (

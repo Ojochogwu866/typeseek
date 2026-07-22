@@ -9,7 +9,8 @@ type FontResult struct {
 	Similarity float64 `json:"similarity,omitempty"`
 }
 
-// RegionResult groups the results for one detected lettering region within an image
+// RegionResult groups results for one detected lettering region; Thumbnail is only shown for secondary (non-primary) regions.
 type RegionResult struct {
-	Results []FontResult `json:"results"`
+	Results   []FontResult `json:"results"`
+	Thumbnail string       `json:"thumbnail,omitempty"`
 }
