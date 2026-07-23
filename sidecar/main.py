@@ -89,16 +89,12 @@ async def embed_image_regions_endpoint(file: UploadFile = File(...)) -> EmbedReg
     # Largest area first — index 0 becomes the "primary" region.
     regions.sort(key=lambda r: r.get("width", 1.0) * r.get("height", 1.0), reverse=True)
 
+    width, height = image.size
     embeddings: list[RegionEmbedding] = []
-    if len(regions) == 1:
-        vector = embed_pil_image(image)
-        embeddings.append(RegionEmbedding(vector=vector.tolist(), thumbnail=_thumbnail_base64(image)))
-    else:
-        width, height = image.size
-        for region in regions:
-            crop = image.crop(_region_box(region, width, height))
-            vector = embed_pil_image(crop)
-            embeddings.append(RegionEmbedding(vector=vector.tolist(), thumbnail=_thumbnail_base64(crop)))
+    for region in regions:
+        crop = image.crop(_region_box(region, width, height))
+        vector = embed_pil_image(crop)
+        embeddings.append(RegionEmbedding(vector=vector.tolist(), thumbnail=_thumbnail_base64(crop)))
 
     return EmbedRegionsResponse(regions=embeddings)
 
