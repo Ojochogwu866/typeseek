@@ -21,6 +21,14 @@ CREATE TABLE IF NOT EXISTS embeddings (
 CREATE INDEX IF NOT EXISTS embeddings_vec_hnsw
     ON embeddings USING hnsw (vec vector_cosine_ops);
 
+-- Single-row table holding the corpus mean embedding. Raw SigLIP embeddings of font specimens
+-- share a dominant "text on a white background" direction that swamps the actual font-identity
+-- signal; every query and stored embedding is centered against this mean before comparison to
+-- restore usable cosine-similarity range.
+CREATE TABLE IF NOT EXISTS embedding_center (
+    vec vector(768) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS descriptions (
     font_id      INTEGER PRIMARY KEY REFERENCES fonts (id) ON DELETE CASCADE,
     official_text TEXT,

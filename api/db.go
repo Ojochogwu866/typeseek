@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"math"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -10,7 +12,8 @@ import (
 )
 
 type DB struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	center []float32
 }
 
 func newDB(ctx context.Context, databaseURL string) (*DB, error) {
@@ -26,16 +29,56 @@ func newDB(ctx context.Context, databaseURL string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &DB{pool: pool}, nil
+
+	db := &DB{pool: pool}
+	if err := db.loadEmbeddingCenter(ctx); err != nil {
+		return nil, fmt.Errorf("loading embedding center: %w", err)
+	}
+	return db, nil
+}
+
+// loadEmbeddingCenter caches the corpus mean embedding, used by centerQuery (stored embeddings
+// are centered once, in place, by ingestion/db/recenter_embeddings.py).
+func (d *DB) loadEmbeddingCenter(ctx context.Context) error {
+	var vec pgvector.Vector
+	if err := d.pool.QueryRow(ctx, "SELECT vec FROM embedding_center LIMIT 1").Scan(&vec); err != nil {
+		return err
+	}
+	d.center = vec.Slice()
+	return nil
+}
+
+// centerQuery subtracts the corpus mean and renormalizes, matching how stored embeddings were
+// centered. Only applied to image queries: text and image embeddings occupy systematically
+// different regions of SigLIP's shared space (the "modality gap"), and empirically centering
+// text queries against the image-domain mean destroys rather than restores their separation —
+// text queries compare directly against the (already-centered) stored embeddings instead.
+func (d *DB) centerQuery(vec []float32) []float32 {
+	out := make([]float32, len(vec))
+	var normSq float32
+	for i, v := range vec {
+		c := v - d.center[i]
+		out[i] = c
+		normSq += c * c
+	}
+	norm := float32(math.Sqrt(float64(normSq)))
+	if norm == 0 {
+		return out
+	}
+	for i := range out {
+		out[i] /= norm
+	}
+	return out
 }
 
 const fontColumns = "id, name, category, license, source_url"
 
 // license is an exact-match filter; pass "" to skip it and match every license.
 func (d *DB) SearchByVector(ctx context.Context, vec []float32, license string, limit int) ([]FontResult, error) {
+	vec = d.centerQuery(vec)
 	rows, err := d.pool.Query(ctx, `
 		SELECT fonts.id, fonts.name, fonts.category, fonts.license, fonts.source_url,
-		       1 - (embeddings.vec <=> $1) AS similarity
+		       greatest(0, 1 - (embeddings.vec <=> $1)) AS similarity
 		FROM embeddings
 		JOIN fonts ON fonts.id = embeddings.font_id
 		WHERE $2 = '' OR fonts.license = $2
@@ -121,7 +164,7 @@ func (d *DB) GetFont(ctx context.Context, id int64) (*FontResult, error) {
 func (d *DB) Neighbors(ctx context.Context, id int64, limit int) ([]FontResult, error) {
 	rows, err := d.pool.Query(ctx, `
 		SELECT f2.id, f2.name, f2.category, f2.license, f2.source_url,
-		       1 - (e2.vec <=> e1.vec) AS similarity
+		       greatest(0, 1 - (e2.vec <=> e1.vec)) AS similarity
 		FROM embeddings e1
 		JOIN embeddings e2 ON e2.font_id != e1.font_id
 		JOIN fonts f2 ON f2.id = e2.font_id

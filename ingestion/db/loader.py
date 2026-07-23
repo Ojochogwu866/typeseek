@@ -35,7 +35,15 @@ def upsert_font(conn: psycopg.Connection, family: FontFamily) -> int:
     return row[0]
 
 
-def upsert_embedding(conn: psycopg.Connection, font_id: int, vector: np.ndarray) -> None:
+def load_embedding_center(conn: psycopg.Connection) -> np.ndarray | None:
+    row = conn.execute("SELECT vec FROM embedding_center LIMIT 1").fetchone()
+    return row[0] if row else None
+
+
+def upsert_embedding(conn: psycopg.Connection, font_id: int, vector: np.ndarray, center: np.ndarray | None) -> None:
+    if center is not None:
+        vector = vector - center
+        vector = vector / np.linalg.norm(vector)
     conn.execute(
         """
         INSERT INTO embeddings (font_id, vec)
@@ -61,11 +69,15 @@ def upsert_description(conn: psycopg.Connection, font_id: int, official_text: st
 
 
 def load_family(
-    conn: psycopg.Connection, family: FontFamily, embedding: np.ndarray | None, llm_tags: str | None
+    conn: psycopg.Connection,
+    family: FontFamily,
+    embedding: np.ndarray | None,
+    llm_tags: str | None,
+    center: np.ndarray | None,
 ) -> int:
     font_id = upsert_font(conn, family)
     if embedding is not None:
-        upsert_embedding(conn, font_id, embedding)
+        upsert_embedding(conn, font_id, embedding, center)
     upsert_description(conn, font_id, official_text=f"{family.name} ({family.category})", llm_tags=llm_tags)
     return font_id
 
@@ -73,6 +85,9 @@ def load_family(
 def main() -> None:
     families = load_catalog(CATALOG_PATH)
     conn = get_connection()
+    center = load_embedding_center(conn)
+    if center is None:
+        logger.warning("no embedding_center row found — new embeddings will be stored uncentered")
 
     loaded = missing_embedding = missing_tags = failed = 0
     for family in tqdm(families, desc="loading corpus"):
@@ -87,12 +102,12 @@ def main() -> None:
             missing_tags += 1
 
         try:
-            load_family(conn, family, embedding, llm_tags)
+            load_family(conn, family, embedding, llm_tags, center)
         except psycopg.OperationalError:
             logger.warning("connection dropped while loading %s, reconnecting", family.name)
             conn = get_connection()
             try:
-                load_family(conn, family, embedding, llm_tags)
+                load_family(conn, family, embedding, llm_tags, center)
             except psycopg.OperationalError:
                 logger.warning("failed to load %s after reconnect", family.name, exc_info=True)
                 failed += 1
