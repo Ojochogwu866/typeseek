@@ -1,15 +1,17 @@
-"""Render specimen images per font: glyph sample, pangram, weight strip.
+"""Render specimen images per font: glyph sample, pangram, weight strip, photo-style.
 
 Complex-script shaping (Arabic, Devanagari, CJK, ...) is out of scope for now — PIL/FreeType
 draws glyphs but does not shape them. Any rendering failure is logged and the font is
 skipped rather than blocking the batch.
 """
 
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
+from random import Random
 
 from fontTools.ttLib import TTFont
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from tqdm import tqdm
 
 from ingestion.catalog import load_catalog
@@ -25,6 +27,16 @@ PANGRAM_CANVAS = (1200, 200)
 WEIGHT_STRIP_WIDTH = 900
 WEIGHT_STRIP_ROW_HEIGHT = 90
 MARGIN = 24
+
+# Real-world photos of lettering (signs, screenshots, book covers) look nothing like a clean
+# black-on-white render — varied background/contrast, slight rotation, and capture blur.
+# This specimen bridges that gap so the stored embedding isn't purely "text on white paper".
+PHOTO_CANVAS = (1200, 260)
+PHOTO_BACKGROUNDS = [
+    ((28, 29, 34), (245, 245, 245)),   # dark background, light text
+    ((235, 229, 217), (30, 30, 30)),   # warm off-white background, dark text
+    ((255, 255, 255), (10, 10, 10)),   # plain white background, near-black text
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,6 +87,29 @@ def _render_single_line(font_path: Path, text: str, canvas_size: tuple[int, int]
     return dest
 
 
+def _render_photo_style(font_path: Path, text: str, canvas_size: tuple[int, int], dest: Path, seed: int) -> Path:
+    rng = Random(seed)
+    bg_color, fg_color = rng.choice(PHOTO_BACKGROUNDS)
+    width, height = canvas_size
+
+    font = _fit_font(font_path, text, width - 2 * MARGIN, height - 2 * MARGIN)
+    image = Image.new("RGB", canvas_size, color=bg_color)
+    draw = ImageDraw.Draw(image)
+    left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
+    x = (width - (right - left)) / 2 - left
+    y = (height - (bottom - top)) / 2 - top
+    draw.text((x, y), text, font=font, fill=fg_color)
+
+    angle = rng.uniform(-6, 6)
+    image = image.rotate(angle, expand=True, fillcolor=bg_color, resample=Image.BICUBIC)
+    image = image.resize(canvas_size)
+    image = image.filter(ImageFilter.GaussianBlur(radius=rng.uniform(0.3, 1.0)))
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    image.save(dest)
+    return dest
+
+
 def _render_weight_strip(variant_paths: dict[str, Path], weights: list[str], dest: Path) -> Path:
     height = WEIGHT_STRIP_ROW_HEIGHT * len(weights)
     image = Image.new("L", (WEIGHT_STRIP_WIDTH, height), color=255)
@@ -105,9 +140,11 @@ def render_family(family: FontFamily) -> list[Specimen]:
     out_dir = SPECIMENS_DIR / family.slug
 
     try:
+        seed = zlib.crc32(family.slug.encode())
         specimens = [
             Specimen("glyph", _render_single_line(primary, GLYPH_SAMPLE, GLYPH_CANVAS, out_dir / "glyph.png")),
             Specimen("pangram", _render_single_line(primary, PANGRAM, PANGRAM_CANVAS, out_dir / "pangram.png")),
+            Specimen("photo", _render_photo_style(primary, PANGRAM, PHOTO_CANVAS, out_dir / "photo.png", seed)),
         ]
         weights = [w for w in family.upright_weights if w in variant_paths]
         if len(weights) > 1:
